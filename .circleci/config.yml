@@ -1,0 +1,47 @@
+version: 2.1
+
+orbs:
+  docker: circleci/docker@1.6.0
+
+executors:
+  node:
+    docker:
+      - image: circleci/node:14-browsers  # Node image to use for running the jobs
+    working_directory: ~/repo
+
+jobs:
+  test:
+    executor: node
+    steps:
+      - checkout
+      - run:
+          name: Install Dependencies
+          command: npm install
+      - run:
+          name: Run Tests
+          command: npm test  # Assuming npm test runs all your tests
+
+  build-and-push:
+    executor: node
+    steps:
+      - checkout
+      - setup_remote_docker:
+          version: 20.10.7
+      - docker/build:
+          image: education-space/my-node-app:latest  # Update with your Docker image name
+          tag: "${CIRCLE_SHA1}"  # Using Git SHA to ensure unique tags for every build
+      - docker/push:
+          image: education-space/my-node-app:latest
+
+workflows:
+  version: 2
+  build-and-deploy:
+    jobs:
+      - test
+      - build-and-push:
+          requires:
+            - test
+          filters:
+            branches:
+              only:
+                - main
